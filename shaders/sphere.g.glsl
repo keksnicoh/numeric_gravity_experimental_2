@@ -2,7 +2,7 @@
 #extension GL_EXT_geometry_shader4 : enable
 const float radius = .1;
 varying out vec2 coord;
-
+//thanks to https://sites.google.com/site/dlampetest/python/vectorized-particle-system-and-geometry-shaders
 void main()
 {
   gl_FrontColor = gl_FrontColorIn[0];
