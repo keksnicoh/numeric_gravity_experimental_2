@@ -1,5 +1,5 @@
 from lib.engine.application import application
-from lib.engine.keyboard.flyaroundHandler2 import flyaroundHandler2 as flyaroundHandler
+from lib.engine.keyboard.flyaroundHandler import flyaroundHandler
 from lib.scene1 import scene1
 
 class sim1():
