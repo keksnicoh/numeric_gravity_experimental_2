@@ -9,7 +9,6 @@ def flyaroundHandler2(world):
 	if 256 in world.keyboardActive:
 		world.exit = True
 	if ord('W') in world.keyboardActive:
-		print "move w"
 		world.camera_position[0] -= sin(b)*cos(a)*s
 		world.camera_position[1] += sin(a)*s
 		world.camera_position[2] += cos(a)*cos(b)*s
