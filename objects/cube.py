@@ -52,6 +52,7 @@ class cube():
 
 	def render(self):
 		self.vbo.bind()
+
 		glEnableClientState(GL_VERTEX_ARRAY);
 		glEnableClientState(GL_COLOR_ARRAY);
 
@@ -61,3 +62,5 @@ class cube():
 
 		glDisableClientState(GL_VERTEX_ARRAY);
 		glDisableClientState(GL_COLOR_ARRAY);
+
+		self.vbo.unbind()

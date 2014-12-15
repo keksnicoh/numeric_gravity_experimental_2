@@ -44,6 +44,10 @@ class world():
 		self.objCoordsystem = objCoordsystem(0.1)
 
 	def initGL(self):
+		#glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR,3);
+		#glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR,1);
+		#glfwOpenWindowHint(GLFW_OPENGL_PROFILE,GLFW_OPENGL_CORE_PROFILE);
+		glutInitDisplayMode(GLUT_3_2_CORE_PROFILE)
 		glClearColor(0.0, 0.0, 0.0, 0.0)
 		glViewport(0, 0, self.width, self.height)
 		glEnable(GL_DEPTH_TEST)

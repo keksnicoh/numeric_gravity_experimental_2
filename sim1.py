@@ -19,14 +19,15 @@
 from OpenGLContext.arrays import *
 from OpenGL.GL import *
 from keyboard.fluent import fluent as kbCntrlFluent
-from keyboard.flyaroundHandler import flyaroundHandler
+from keyboard.flyaroundHandler2 import flyaroundHandler2
 
 from objects.cube import cube as objCube
 from objects.arrow import arrow as objArrow
+import cyglfw3 as glfw
 
 import time
 import math
-from world import world as World
+from world2 import world as World
 
 global objN
 global drawRelativeVectors
@@ -36,6 +37,46 @@ global physicalObjects
 global arrow
 global phys_dt
 global attachCenter
+global shader
+def initShaders():
+	shader_program = glCreateProgram()
+	shader_vertex = glCreateShader(GL_VERTEX_SHADER)
+	shader_fragment = glCreateShader(GL_FRAGMENT_SHADER)
+
+	glShaderSource(shader_vertex, """
+		varying vec4 vertex_color;
+
+		void main() {
+			gl_Position = ftransform();
+			gl_FrontColor = gl_Color;
+
+		}
+	""")
+	glCompileShader(shader_vertex)
+	shader_vertex_log = glGetShaderInfoLog(shader_vertex)
+	if shader_vertex_log:
+		raise RuntimeError("vertex_shader: " + shader_vertex_log)
+	glAttachShader(shader_program, shader_vertex)
+	program_log = glGetProgramInfoLog(shader_program)
+	if program_log:
+		raise RuntimeError("shader_program: " + program_log)
+
+	glShaderSource(shader_fragment, """
+		void main() {
+			gl_FragColor = gl_Color;
+		}
+	""")
+	glCompileShader(shader_fragment)
+	shader_fragment_log = glGetShaderInfoLog(shader_fragment)
+	if shader_fragment_log:
+		raise RuntimeError("fragment_shader: " + shader_fragment_log)
+	glAttachShader(shader_program, shader_fragment)
+	program_log = glGetProgramInfoLog(shader_program)
+	glLinkProgram(shader_program)
+	if program_log:
+		raise RuntimeError("shader_program: " + program_log)
+
+	return shader_program
 
 def initContext(world):
 	global arrow
@@ -85,7 +126,7 @@ def initContext(world):
 	print "   [1-6] to activate test masses"
 	print "   [v]   draw velocity vectors for physical objects"
 	print "   [r]   draw relative vectors for physical objects"
-
+	glEnable(GL_DEPTH_TEST)
 def getLengthSquared(v):
 	return v[0]**2+v[1]**2+v[2]**2
 
@@ -148,6 +189,7 @@ def physics():
 
 def renderContext():
 	obj = 0
+
 	while obj < len(objects):
 		if not attachCenter or obj != objN:
 			(o, x, y, z) = objects[obj]
@@ -180,7 +222,7 @@ def renderContext():
 			arrow.render()
 			glPopMatrix()
 
-def handleMovement(world, kbCntrl):
+def handleMovement(world):
 	global phys_dt
 	global drawRelativeVectors
 	global drawVelocity
@@ -188,38 +230,63 @@ def handleMovement(world, kbCntrl):
 
 	"""Keyboard controlling, uses keyboard.flyaroundHandler
 	   to provide basic interaction"""
-	flyaroundHandler(world, kbCntrl)
+	flyaroundHandler2(world)
 
-	if '9' in kbCntrl.active:
+	if '9' in world.keyboardActive:
 		physicalObjects[objN+0][1] -= 1000
 		print "central mass -1000"
-	if '0' in kbCntrl.active:
+	if '0' in world.keyboardActive:
 		physicalObjects[objN+0][1] += 1000
 		print "central mass +1000"
 
-	physicalObjects[objN+1][1] = 5000 if '1' in kbCntrl.active else 0
-	physicalObjects[objN+2][1] = 5000 if '2' in kbCntrl.active else 0
-	physicalObjects[objN+3][1] = 5000 if '3' in kbCntrl.active else 0
-	physicalObjects[objN+4][1] = 5000 if '4' in kbCntrl.active else 0
-	physicalObjects[objN+5][1] = 5000 if '5' in kbCntrl.active else 0
-	physicalObjects[objN+6][1] = 5000 if '6' in kbCntrl.active else 0
+	physicalObjects[objN+1][1] = 5000 if '1' in world.keyboardActive else 0
+	physicalObjects[objN+2][1] = 5000 if '2' in world.keyboardActive else 0
+	physicalObjects[objN+3][1] = 5000 if '3' in world.keyboardActive else 0
+	physicalObjects[objN+4][1] = 5000 if '4' in world.keyboardActive else 0
+	physicalObjects[objN+5][1] = 5000 if '5' in world.keyboardActive else 0
+	physicalObjects[objN+6][1] = 5000 if '6' in world.keyboardActive else 0
 
-	for key in kbCntrl.stack:
-		if key == 'r':
+	for key in world.keyboardStack:
+		print key
+		if key == ord('R'):
+			print "OK"
 			drawRelativeVectors = False if drawRelativeVectors else True
-		if key == 'v':
+		if key == ord('V'):
 			drawVelocity = False if drawVelocity else True
-		if key == 'o':
-			world.useShader = 1 if world.useShader == 0 else 0
-			print "switch shader"
-		if key == '+':
+		if key == 93:
 			phys_dt += 0.0001
-		if key == '-':
+		if key == 47:
 			phys_dt -= 0.0001
-		if key == 'c':
+		if key == ord('C'):
 			attachCenter = False if attachCenter else True
 
-	kbCntrl.stack = []
+	world.keyboardStack = []
+def destruct():
+	global objects
+	del objects
+def dorp():
+
+	print "bla"
+
+def scene(world):
+	global shader
+
+	physics()
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+	# scene context
+	glMatrixMode(GL_MODELVIEW) #cam perspective
+	glPushMatrix()
+	glRotatef(world.camera_rotation[1],1,0,0)
+	glRotatef(world.camera_rotation[0],0,1,0)
+	glTranslatef(world.camera_position[0],world.camera_position[1],world.camera_position[2])
+	glUseProgram(shader)
+	renderContext()
+	glPopMatrix() #end cam perspective
+	glfw.SwapBuffers(world.window)
+	glfw.PollEvents()
+	#glutSwapBuffers()
+	glUseProgram(0)
 
 if __name__ == "__main__":
 	objN = 40
@@ -231,17 +298,17 @@ if __name__ == "__main__":
 	phys_dt = 0.0001
 	attachCenter = False
 	world = World()
-	world.rotation        = [34, 50]
-	world.camera_position = [7.0675604969805788, -12.974440539426263, -9.4667938872866237]
-	world.mouseData       = [0,0,0,0,world.rotation[0],world.rotation[1]]
+	world.camera_position = [3.2216284299338929, -8.0277272964718041, -7.4030994749181191]
+	world.camera_rotation = [-319.72265625, -309.3828125, -319.72265625, -309.3828125]
 	# keyboard control
-	kbCntrl = kbCntrlFluent()
-	kbCntrl.activate()
-	world.keyboardTriggerCallback = lambda : handleMovement(world, kbCntrl)
-	world.sceneContext = physics
-	world.renderContext = renderContext
 
 	initContext(world)
+	shader = initShaders()
+
+	world.destruct = destruct
+	world.keyboard = handleMovement
+	world.scene = scene
+
 
 	world.run()
 
