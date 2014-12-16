@@ -143,7 +143,7 @@ class scene1(scene):
 			world.camera_position[2] = -self.physicalObjects[self.objN][4] #wuuu...
 		self.physics()
 
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+		glClear(GL_COLOR_BUFFER_BI | GL_DEPTH_BUFFER_BIT)
 		glEnable(GL_DEPTH_TEST)
 		glUseProgram(self.shader)
 
@@ -183,6 +183,6 @@ class scene1(scene):
 		glPopMatrix() #end cam perspective
 		glUseProgram(0)
 
-	def destruct(self,world):
+	def destruct(self):
 		self.objects = []
 		self.physicalObjects = []

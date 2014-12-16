@@ -40,6 +40,7 @@ class application():
 		self.keyboardStack = []
 		"""keyboard_active [I,...] contains all currently active keys"""
 		self.keyboardActive = []
+
 		"""events"""
 		self.destruct = lambda w : None
 		self.keyboard = lambda w : None
