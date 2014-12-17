@@ -1,6 +1,9 @@
 numeric_gravity_experimental_2
 ==============================
 
+python based OpenGL 4.1 grafical life simulations. also 
+using: cyglfw3, PyOpenGL, numpy
+
 experimental implementation of gravity simulation.
 this repo is for getting experience with python,
 opengl,shaders,numpy and so on..
