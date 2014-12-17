@@ -16,7 +16,7 @@ class sim1():
 		self.app.destruct = self.scene.destruct
 		self.app.scene = self.scene.render
 		self.scene.prepare()
-	def destruct(self,word):
+	def destruct(self):
 		self.scene.destruct()
 	def keyboard(self,app):
 		"""Keyboard controlling, uses keyboard.flyaroundHandler

@@ -1,16 +1,23 @@
 """base class for rendering scenes with
    opengl, glu, and pyclfw3.
-   this class will setup an opengl4 compatible
-   environment with shader versions: 410
+   this class will setup an opengl4.1 compatible
+   environment with shader versions: 410.
+   Warning: no openGl2-3 operations supported e.g.
+            - glMatrixMode, glBegin, ...
+
    @author Nicolas 'keksnicoh' Heimann <nicolas.heimann@gmail.com>
    """
 
-import OpenGL.GLU as GLU
-import OpenGL.GL as GL
+from OpenGL.GL import *
 import cyglfw3 as glfw
-import sys
-import traceback
+from sys import exc_info
+from traceback import print_exc
 from termcolor import colored
+from math import pi
+from pyrr.matrix44 import (multiply as m4dot, create_from_translation,
+     create_from_x_rotation, create_from_y_rotation,
+     create_perspective_projection_matrix)
+import numpy
 
 class application():
 	def __init__(self, width=600, height=600, window_title="no title"):
@@ -46,30 +53,57 @@ class application():
 		self.keyboard = lambda w : None
 		self.scene    = lambda w : None
 
+		print "* initialize application"
 		self.initGlfw()
+		print "- try to load OpenGL 4.1 core profile"
 		self.initGlCoreProfile()
-		self.initGLU()
+		self.initGlfwWindow()
+
+		print 'Vendor: %s' %         glGetString(GL_VENDOR)
+		print 'Opengl version: %s' % glGetString(GL_VERSION)
+		print 'GLSL Version: %s' %   glGetString(GL_SHADING_LANGUAGE_VERSION)
+		print 'Renderer: %s' %       glGetString(GL_RENDERER)
+		print 'GLFW3: %s' %          glfw.GetVersionString()
+
+		print "initialize matrices..."
+		self._initM44()
+		print "[OK] application is ready."
+
+	def initGlCoreProfile(self):
+		"""setup opengl 4.1"""
+		glfw.WindowHint(glfw.CONTEXT_VERSION_MAJOR, 4)
+		glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, 1)
+		glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, 1)
+		glfw.WindowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 
 	def initGlfw(self):
+		"""initialize glfw"""
 		if not glfw.Init():
 			raise RuntimeError('glfw.Init() error')
 
+	def initGlfwWindow(self):
+		"""initialize glwf window and attach callbacks"""
 		self.window = glfw.CreateWindow(self.width,self.height,self.window_title)
 		if not self.window:
 			raise RuntimeError('glfw.CreateWindow() error')
-
 		glfw.MakeContextCurrent(self.window)
 		glfw.SetMouseButtonCallback(self.window, self.onMouse)
 		glfw.SetKeyCallback(self.window, self.onKeyboard)
 
-	def initGlCoreProfile(self):
-		glfw.WindowHint(glfw.CONTEXT_VERSION_MAJOR, 3)
-		glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, 2)
-		glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, 1)
-		glfw.WindowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+	def _initM44(self):
+		"""initialize all provided matrices"""
+		self.m44_camera_rotation_x = create_from_x_rotation(self.camera_rotation[1])
+		self.m44_camera_rotation_y = create_from_y_rotation(self.camera_rotation[0])
+		self.m44_camera_translation = create_from_translation(self.camera_position)
 
-	def initGLU(self):
-		GLU.gluPerspective(45.0, float(self.width)/float(self.height), 0.1, 100.0)
+		self.m44_projection = create_perspective_projection_matrix(45.00, 3.0/4.0, 0.1, 100, dtype=None)
+		self._buildM44ModelView()
+
+	def _buildM44ModelView(self):
+		"""create a static model-view matrix
+		   by using self.camera_position, self.camera_rotation"""
+		self.m44_model_view_rotation = m4dot(self.m44_camera_rotation_y,self.m44_camera_rotation_x)
+		self.m44_model_view = m4dot(self.m44_camera_translation,self.m44_model_view_rotation)
 
 	def getCursorRelative(self):
 		"""returns cursor position relative to window"""
@@ -104,28 +138,38 @@ class application():
 	def mouseDrag(self,world):
 		if self.mouse_btn[0][0]:
 			cx,cy = self.getCursorRelative()
-			self.updateCameraRotation(
-				 -(cx - self.camera_rotation[2] - self.mouse_btn[0][1]) % 360,
-				 -(cy - self.camera_rotation[3] - self.mouse_btn[0][2]) % 360
+			cx /= 150
+			cy /= 150
+			self.cameraRotateTo(
+				 (cx + self.camera_rotation[2] - self.mouse_btn[0][1]/150) % (2*pi),
+				 (cy + self.camera_rotation[3] - self.mouse_btn[0][2]/150) % (2*pi),
 			)
-	def updateCameraRotation(self,rx,ry):
-			self.camera_rotation[0] = rx
-			self.camera_rotation[1] = ry
+	def cameraRotateTo(self,rx,ry):
+		self.camera_rotation[0] = rx
+		self.camera_rotation[1] = ry
+		self.m44_camera_rotation_x = create_from_x_rotation(self.camera_rotation[1])
+		self.m44_camera_rotation_y = create_from_y_rotation(self.camera_rotation[0])
+		self._buildM44ModelView()
+
+	def translateCameraRelative(self,position):
+		self.camera_position = numpy.add(self.camera_position,position)
+		self.m44_camera_translation = create_from_translation(self.camera_position)
+		self._buildM44ModelView()
+
+	def translateCamera(self,position):
+		self.camera_position = numpy.array(position)
+		self.m44_camera_translation = create_from_translation(self.camera_position)
+		self._buildM44ModelView()
 
 	def run(self):
 		while not self.exit and not glfw.WindowShouldClose(self.window):
-			GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
-			GL.glMatrixMode(GL.GL_MODELVIEW)
-			GL.glPushMatrix()
-			GL.glRotatef(self.camera_rotation[1],1,0,0)
-			GL.glRotatef(self.camera_rotation[0],0,1,0)
-			GL.glTranslatef(self.camera_position[0],self.camera_position[1],self.camera_position[2])
-
+			"""todo move to a better place..."""
 			try:
 				self.scene(self)
 				glfw.SwapBuffers(self.window)
+				glfw.PollEvents()
 			except:
-				traceback.print_exc(sys.exc_info()[0])
+				print_exc(exc_info()[0])
 				print colored("try to shutdown...","yellow")
 				self.terminate()
 				print colored("program terminated due an unkown error!","red")
@@ -134,10 +178,9 @@ class application():
 				self.keyboard(self)
 				self.mouseDrag(self)
 			except:
-				traceback.print_exc(sys.exc_info()[0])
+				print_exc(exc_info()[0])
 				print colored("IO interrupted...","red", attrs=['reverse', 'blink'])
-
-			glfw.PollEvents()
+		self.terminate()
 
 	def terminate(self):
 		self.destruct(self)

@@ -38,6 +38,9 @@ class scene1(scene):
 		self.r = 3
 
 	def prepare(self):
+		self.initShader()
+
+		#return
 		r = self.r
 		main_mass = 80000
 		sat_mass = 1.0
@@ -69,7 +72,6 @@ class scene1(scene):
 		self.physicalObjects.append([self.objN+6, 0, 0,0,-r, 0,0,0])
 
 		self.arrow = objArrow()
-		self.initShader()
 
 
 	def initShader(self):
@@ -81,6 +83,8 @@ class scene1(scene):
 		glAttachShader(shader_program, compile_shader_from_file(GL_FRAGMENT_SHADER, frag_source))
 		link_program(shader_program)
 		self.shader = shader_program
+
+		print "SHADERS"
 
 	def getLengthSquared(self,v):
 		return v[0]**2+v[1]**2+v[2]**2
@@ -137,15 +141,17 @@ class scene1(scene):
 			self.objects[obj[0]] = (glObj, obj[2],obj[3],obj[4])
 
 	def render(self,world):
+		glUseProgram(self.shader)
+		return
 		if self.attachCenter:
 			world.camera_position[0] = -self.physicalObjects[self.objN][2]
 			world.camera_position[1] = -self.physicalObjects[self.objN][3]
 			world.camera_position[2] = -self.physicalObjects[self.objN][4] #wuuu...
 		self.physics()
 
-		glClear(GL_COLOR_BUFFER_BI | GL_DEPTH_BUFFER_BIT)
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 		glEnable(GL_DEPTH_TEST)
-		glUseProgram(self.shader)
+
 
 		obj = 0
 		while obj < len(self.objects):
@@ -180,7 +186,6 @@ class scene1(scene):
 				self.arrow.render()
 				glPopMatrix()
 
-		glPopMatrix() #end cam perspective
 		glUseProgram(0)
 
 	def destruct(self):
