@@ -1,8 +1,6 @@
 from engine.scene import scene
 from OpenGLContext.arrays import *
 from OpenGL.GL import *
-from engine.objects.cube import cube as objCube
-from engine.objects.arrow import arrow as objArrow
 from engine.helpers.shader import compile_shader_from_file, link_program
 import os
 class simulation_scene(scene):

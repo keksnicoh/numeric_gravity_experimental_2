@@ -1,7 +1,7 @@
 from OpenGL.GL import (glCompileShader, glShaderSource, glCreateProgram,
 	glCreateShader, glAttachShader, glLinkProgram, glGetUniformLocation,
-	glGetShaderInfoLog, glGetAttribLocation, glUseProgram, GL_FRAGMENT_SHADER,
-	GL_VERTEX_SHADER, GL_GEOMETRY_SHADER)
+	glGetShaderInfoLog, glGetProgramInfoLog, glGetAttribLocation, glUseProgram,
+	GL_FRAGMENT_SHADER, GL_VERTEX_SHADER, GL_GEOMETRY_SHADER)
 
 class shader(object):
 	def __init__(self):
@@ -32,5 +32,9 @@ class shader(object):
 
 	def linkProgram(self):
 		glLinkProgram(self.program_id)
+		program_log = glGetProgramInfoLog(self.program_id)
+		if program_log:
+			raise RuntimeError("shader_program\n%s" % program_log)
+
 	def useProgram(self):
 		glUseProgram(self.program_id)
