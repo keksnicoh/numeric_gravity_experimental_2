@@ -17,6 +17,7 @@ with OpenGL4.1 core profile the application will segfault.
 
 currently, to keep it simple, there is no use of consants or SI-units.
 for the future:
+- integrate units e.g. SI-units and force characterisation constants
 - more advanced shader techniques
 - more advanced approximations
 - mile stone: implementation of position based algorithms
