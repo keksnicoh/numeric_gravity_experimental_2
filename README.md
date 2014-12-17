@@ -11,15 +11,15 @@ a tag will label a from now on deprecated structure.
 
 fuck yea gravity...
 
-saturn like
+saturn like (1million particles)
 
 ![saturn like](/img/saturn like object.png)
 
-galaxy like
+galaxy like 
 
 ![galaxy like](/img/galaxy like.png)
 
-some blackhole like stuff
+some blackhole like stuff 
 
 ![bh2](/img/black hole like2.png)
 ![bh1](/img/black hole like.png)
