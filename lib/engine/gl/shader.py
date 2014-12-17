@@ -1,12 +1,12 @@
 from OpenGL.GL import (glCompileShader, glShaderSource, glCreateProgram,
 	glCreateShader, glAttachShader, glLinkProgram, glGetUniformLocation,
 	glGetShaderInfoLog, glGetProgramInfoLog, glGetAttribLocation, glUseProgram,
-	GL_FRAGMENT_SHADER, GL_VERTEX_SHADER, GL_GEOMETRY_SHADER)
+	glDeleteShader, GL_FRAGMENT_SHADER, GL_VERTEX_SHADER, GL_GEOMETRY_SHADER)
 
 class shader(object):
 	def __init__(self):
 		self.program_id = glCreateProgram()
-
+		self._shaders = []
 	def attachShader(self,type,source):
 		shader = glCreateShader(type)
 		glShaderSource(shader,source)
@@ -23,6 +23,7 @@ class shader(object):
 				str_type = "unkown shader type %s" % str(type)
 			raise RuntimeError("%s\n%s" % (str_type, shader_log))
 		glAttachShader(self.program_id, shader)
+		self._shaders.append(shader)
 
 	def uniformLocation(self, name):
 		return glGetUniformLocation(self.program_id, name)
@@ -36,5 +37,8 @@ class shader(object):
 		if program_log:
 			raise RuntimeError("shader_program\n%s" % program_log)
 
+		for shader in self._shaders:
+			glDeleteShader(shader)
+		self._shaders = []
 	def useProgram(self):
 		glUseProgram(self.program_id)

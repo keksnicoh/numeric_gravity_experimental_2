@@ -20,5 +20,8 @@ class simulation_scene(scene):
 			obj.render(world);
 
 	def destruct(self):
-		self.objects = []
-		self.physicalObjects = []
+		for obj in self.objects:
+			print "destruct ", obj
+			obj.destruct()
+		del self.objects
+		self.__init__()

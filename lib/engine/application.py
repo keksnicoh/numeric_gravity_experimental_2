@@ -165,9 +165,9 @@ class application():
 		while not self.exit and not glfw.WindowShouldClose(self.window):
 			"""todo move to a better place..."""
 			try:
+				glfw.PollEvents()
 				self.scene(self)
 				glfw.SwapBuffers(self.window)
-				glfw.PollEvents()
 			except:
 				print_exc(exc_info()[0])
 				print colored("try to shutdown...","yellow")
