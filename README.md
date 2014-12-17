@@ -15,6 +15,7 @@ and all deprecated old-fashion-style opengl function.
 Tested on Mac OS X Yosimiti. If somethings wrong
 with OpenGL4.1 core profile the application will segfault.
 
+currently, to keep it simple, there is no use of consants or SI-units.
 for the future:
 - more advanced shader techniques
 - more advanced approximations
