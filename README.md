@@ -5,6 +5,22 @@ experimental implementation of gravity simulation.
 this repo is for getting experience with python,
 opengl,shaders,numpy and so on..
 
+at current stage only simple euler approximation
+is used. 
+
+this library aims to use all the awesome features
+of OpenGL4.1 so it currently loads OpenGL4.1 core
+profile by using glfw. There is no use of GLU,GLUT 
+and all deprecated old-fashion-style opengl function.
+Tested on Mac OS X Yosimiti. If somethings wrong
+with OpenGL4.1 core profile the application will segfault.
+
+for the future:
+- more advanced shader techniques
+- more advanced approximations
+- mile stone: implementation of position based algorithms
+- physics like springs, flying objects under constant gravitational field, ...
+
 tags represents implementation progress.
 when getting new experience to structure the program,
 a tag will label a from now on deprecated structure.
