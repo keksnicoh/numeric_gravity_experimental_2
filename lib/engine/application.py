@@ -96,7 +96,7 @@ class application():
 		self.m44_camera_rotation_y = create_from_y_rotation(self.camera_rotation[0])
 		self.m44_camera_translation = create_from_translation(self.camera_position)
 
-		self.m44_projection = create_perspective_projection_matrix(45.00, 3.0/4.0, 0.1, 100, dtype=None)
+		self.m44_projection = create_perspective_projection_matrix(45.00, 3.0/4.0, 0.1, 1000, dtype=None)
 		self._buildM44ModelView()
 
 	def _buildM44ModelView(self):

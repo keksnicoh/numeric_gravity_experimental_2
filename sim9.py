@@ -19,12 +19,14 @@ class sim9():
 		self.app.camera_position = [25.117134754661578, -4.4148233243429074, -20.328067450210863]
 		self.app.camera_rotation = [5.428706140512919, 6.169773848846253, 5.428706140512919, 6.169773848846253]
 		self.app._initM44()
-		self.app.keyboard = flyaroundHandler
+		self.app.keyboard = self.keyboard
 		self.app.destruct = self.destruct
 		self.app.scene = self.scene.render
 
+		self.gravity.pushParticleToInitState([0,0,0],[0,0,0],800000)
+
 		main_mass = 800000
-		c_obj_n   = 600
+		c_obj_n   = 800
 		dphi      = 2*pi / c_obj_n
 		c_r       = 6
 		sat_v     = sqrt(main_mass/(c_r));
@@ -36,15 +38,30 @@ class sim9():
 				round(random.uniform(0.1, 1.0), 10),
 				round(random.uniform(0.1, 1.0), 10),
 				round(random.uniform(0.1, 1.0), 10),
+				round(random.uniform(0.1, 1.0), 10),
 			]
 			self.gravity.pushParticleToInitState(
-				[rand[0]+c_r*cos(dphi*obj),rand[1]+-c_r*sin(dphi*obj),rand[2]+1],
-				[rand[3]+sin(dphi*obj)*sat_v,rand[4]+cos(dphi*obj)*sat_v,rand[5]+1],50
+				[rand[0]+c_r*cos(dphi*obj),rand[1]+-c_r*sin(dphi*obj),rand[2]],
+				[rand[3]+sin(dphi*obj)*sat_v,rand[4]+cos(dphi*obj)*sat_v,rand[5]+1],
+				50+rand[6]*10
 			)
 
-		self.gravity.pushParticleToInitState([0,0,0],[0,0,0],800000)
 		self.scene.prepare()
 
+	def keyboard(self,world):
+		flyaroundHandler(world)
+		if ord('9') in world.keyboardActive:
+			self.gravity._p_mass[0] += 10000
+		if ord('8') in world.keyboardActive:
+			self.gravity._p_mass[0] -= 10000
+		if ord('T') in world.keyboardActive:
+			self.gravity._p_pos[0][0] += .3
+		if ord('G') in world.keyboardActive:
+			self.gravity._p_pos[0][0] -= .3
+		if ord('F') in world.keyboardActive:
+			self.gravity._p_pos[0][1] += .3
+		if ord('H') in world.keyboardActive:
+			self.gravity._p_pos[0][1] -= .3
 	def destruct(self,word):
 		self.scene.destruct()
 

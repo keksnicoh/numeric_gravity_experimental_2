@@ -113,7 +113,7 @@ void main() {
     if (1.0-length(coord)<0.0) {
     	discard;
     }
-    fout_color = vec4(1.0, .75, 0.25, (.7*length( coord )*.7*length( coord ))+.3);
+    fout_color = vec4(1.0, .75, 0.25, 0.5-(.7*length( coord )*.7*length( coord ))+.3);
 }
 """
 GEOMETRY_SHADER = """
