@@ -3,7 +3,7 @@ numeric_gravity_experimental_2
 
 python based OpenGL 4.1 simulations using PyOpenGL, cyglfw3, numpy, GLSL 410
 
-experimental implementation of gravity simulation.
+experimental implementation of some simulations.
 this repo is for getting experience with python,
 opengl,shaders,numpy and so on..
 
