@@ -1,8 +1,7 @@
 numeric_gravity_experimental_2
 ==============================
 
-python based OpenGL 4.1 grafical life simulations. also 
-using: cyglfw3, PyOpenGL, numpy
+python based OpenGL 4.1 simulations using PyOpenGL, cyglfw3, numpy, GLSL 410
 
 experimental implementation of gravity simulation.
 this repo is for getting experience with python,
@@ -26,13 +25,9 @@ for the future:
 - mile stone: implementation of position based algorithms
 - physics like springs, flying objects under constant gravitational field, ...
 
-tags represents implementation progress.
-when getting new experience to structure the program,
-a tag will label a from now on deprecated structure.
-
 fuck yea gravity...
 
-saturn like (1million particles)
+somerthing similar to saturn (1million particles)
 
 ![saturn like](/img/saturn like object.png)
 
@@ -40,7 +35,7 @@ galaxy like
 
 ![galaxy like](/img/galaxy like.png)
 
-some blackhole like stuff 
+maybe something like black holes
 
 ![bh2](/img/black hole like2.png)
 ![bh1](/img/black hole like.png)
