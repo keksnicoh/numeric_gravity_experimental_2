@@ -1,36 +1,21 @@
-"""gravity simulation based on singular mass points.
-   vertex shader will pass the transformed point position
-   to geometry shader. geometry shader will spawn a screen
-   parallel quad around the vertex. the fragment shader
-   will render it so it looks like a ball.
-
-   this simulation allows to configure which masses should
-   carrier force to other particles. if true for each
-   particle this will be a normal simulation with n!
-   interactions.
-
-   to simulate heavy amout of particles, it is a good
-   approximation to set force carriing particles a
-   very big mass compared to particles without force.
-   its like a perfect-gas or something, where there
-   is a cloud of maybe 500k particles around a black
-   hole.
-
-   known issues:
-   - each frame requires to swap the whole position
-     memory to the grafic-card buffer. this should
-     be avoided by using transformation feedback.
-   - singulatities when objects are very close
+"""experimental gravity implementation based on
+   opencl
 
    @author Nicolas 'keksnicoh' Heimann <keksnicoh@gmail.com>"""
 
 from OpenGL.GL import *
 from engine.gl.shader import shader
+import pyopencl as cl
+import pyopencl
+from pyopencl.tools import get_gl_sharing_context_properties
 import numpy
+mf = cl.mem_flags
 
-class particle_gravity():
+class particle_gravity_cl():
 	def __init__(self):
 		self.particles_init_state = []
+		self.particles_init_state_ww = []
+		self.particles_init_state_has_ww = []
 		self.initPhysics()
 
 	def initShader(self):
@@ -45,8 +30,12 @@ class particle_gravity():
 			pos[0],pos[1],pos[2],
 			vel[0],vel[1],vel[2],
 			color[0],color[1],color[2],
-			has_force,mass,radius
+			mass,radius
 		])
+
+		self.particles_init_state_has_ww.append(has_force)
+		if has_force:
+			self.particles_init_state_ww.append(len(self.particles_init_state)-1)
 
 	def initPhysics(self):
 		self._p_count  = 0          # particle count
@@ -66,54 +55,75 @@ class particle_gravity():
 		self.initShader()
 
 		init = numpy.array(self.particles_init_state, dtype=numpy.float32)
-		self._p_pos    = init[:, [0,1,2]]
-		self._p_vel    = init[:, [3,4,5]]
-		self._p_color  = init[:, [6,7,8]]
-		self._p_mass   = init[:, 10]
-		self._p_radius = init[:, 11]
-		self._p_count  = len(self._p_pos)
+		self._p_count  = len(init)
+		self._p_pos    = numpy.zeros((self._p_count, 4), dtype=numpy.float32)
+		self._p_vel    = numpy.zeros((self._p_count, 4), dtype=numpy.float32)
+		self._p_mass   = init[:, 9]
 
-		indices = []
-		for (index,has_force) in enumerate(init[:,9]):
-			if has_force:
-				indices.append(index)
-		self._p_ww_indicies = numpy.array(indices)
+		self._p_pos[:,[0,1,2]] = init[:, [0,1,2]]
+		self._p_pos[:,3]       = self._p_mass
 
+		self._p_vel[:,[0,1,2]] = init[:, [3,4,5]]
+		self._p_color          = init[:, [6,7,8]]
+		self._p_radius         = init[:, 10]
+		self._p_ww             = numpy.array(self.particles_init_state_ww, dtype=numpy.int32)
+		self._p_ww_len         = len(self._p_ww)
+		self._p_has_ww         = numpy.array(self.particles_init_state_has_ww, dtype=numpy.int32)
+
+		print self._p_has_ww
 		# prerpare vertex buffer object and vertex
 		# array object.
+
+		self.prepareGlBuffer()
+		self.prepareClBuffer()
+
+		self.render = self._render
+		self.ready = True
+
+	def prepareGlBuffer(self):
 		self.vao_id = glGenVertexArrays(1)
-		self.vbo_id = glGenBuffers(3)
+		self.vbo_id = glGenBuffers(4)
 
 		glBindVertexArray(self.vao_id)
 		glBindBuffer(GL_ARRAY_BUFFER, self.vbo_id[0])
-		glBufferData(GL_ARRAY_BUFFER, ArrayDatatype.arrayByteCount(self._p_pos), self._p_pos, GL_STATIC_DRAW)
-		glVertexAttribPointer(self.shader.attributeLocation('buffer_in_position'), 3, GL_FLOAT, GL_FALSE, 0, None)
+		glBufferData(GL_ARRAY_BUFFER, ArrayDatatype.arrayByteCount(self._p_pos), self._p_pos, GL_DYNAMIC_DRAW)
+		glVertexAttribPointer(self.shader.attributeLocation('buffer_in_position'),4, GL_FLOAT, GL_FALSE, 0, None)
 		glEnableVertexAttribArray(0)
 
 		glBindBuffer(GL_ARRAY_BUFFER, self.vbo_id[1])
-		glBufferData(GL_ARRAY_BUFFER, ArrayDatatype.arrayByteCount(self._p_color), self._p_color, GL_STATIC_DRAW)
-		glVertexAttribPointer(self.shader.attributeLocation('buffer_in_color'), 3, GL_FLOAT, GL_FALSE, 0, None)
+		glBufferData(GL_ARRAY_BUFFER, ArrayDatatype.arrayByteCount(self._p_vel), self._p_vel, GL_STATIC_DRAW)
+		glVertexAttribPointer(self.shader.attributeLocation('buffer_in_vel'), 3, GL_FLOAT, GL_FALSE, 0, None)
 		glEnableVertexAttribArray(1)
 
 		glBindBuffer(GL_ARRAY_BUFFER, self.vbo_id[2])
+		glBufferData(GL_ARRAY_BUFFER, ArrayDatatype.arrayByteCount(self._p_color), self._p_color, GL_STATIC_DRAW)
+		glVertexAttribPointer(self.shader.attributeLocation('buffer_in_color'), 3, GL_FLOAT, GL_FALSE, 0, None)
+		glEnableVertexAttribArray(2)
+
+		glBindBuffer(GL_ARRAY_BUFFER, self.vbo_id[3])
 		glBufferData(GL_ARRAY_BUFFER, ArrayDatatype.arrayByteCount(self._p_radius), self._p_radius, GL_STATIC_DRAW)
 		glVertexAttribPointer(self.shader.attributeLocation('buffer_in_radius'), 1, GL_FLOAT, GL_FALSE, 0, None)
-		glEnableVertexAttribArray(2)
+		glEnableVertexAttribArray(3)
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0)
 		glBindVertexArray(0)
 
-		# activate rendering
-		self.render = self._render
-		self.ready = True
+	def prepareClBuffer(self):
+		platform = cl.get_platforms()
+		self.ctx = cl.Context(properties=get_gl_sharing_context_properties(),devices=[])
+		self.queue = cl.CommandQueue(self.ctx)
+		self._cl_buf_pos  = cl.GLBuffer(self.ctx, mf.READ_WRITE, int(self.vbo_id[0]))
+		self._cl_buf_vel  = cl.GLBuffer(self.ctx, mf.READ_WRITE, int(self.vbo_id[1]))
+		self._cl_p_ww     = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self._p_ww)
+		self._cl_p_has_ww = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self._p_ww)
+		self._cl_p_ww_len = numpy.int32(len(self._p_ww))
+		self.prog = cl.Program(self.ctx, CL_KERNEL).build()
 
 	def physics(self):
-		"""calculates the motion of objects"""
-		for ww_i in self._p_ww_indicies:
-			d_pos        = self._p_pos[ww_i]-self._p_pos
-			gm_by_r3     = self._p_mass[ww_i] / ((d_pos ** 2).sum(axis=1) + self._p_eps ** 2)**1.5
-			self._p_vel += (d_pos.T * gm_by_r3).T * self._p_dt
-		self._p_pos += self._p_vel * self._p_dt
+		kernelargs = (self._cl_buf_pos,self._cl_buf_vel,self._cl_p_has_ww, self._cl_p_ww,self._cl_p_ww_len)
+		self.prog.physics(self.queue, (self._p_count,), None, *kernelargs)
+		self.queue.finish()
+		cl.enqueue_release_gl_objects(self.queue, [self._cl_buf_pos,self._cl_buf_vel])
 
 	def _renderNotReady(self,world):
 		raise RuntimeError('particle_gravity not ready. use particle_gravity.prepare() before rendering')
@@ -125,16 +135,11 @@ class particle_gravity():
 		pass
 
 	def _render(self,world):
-		self.physics()
-		glBindBuffer(GL_ARRAY_BUFFER, self.vbo_id[0])
-		glBufferSubData(GL_ARRAY_BUFFER, 0, ArrayDatatype.arrayByteCount(self._p_pos), self._p_pos) ;
-		glBindBuffer(GL_ARRAY_BUFFER, 0)
-
 		self.shader.useProgram()
+		self.physics()
+
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		#glEnable(GL_ALPHA_TEST)
-		#glAlphaFunc(GL_GREATER,.01)
 		glUniformMatrix4fv(self.shader.uniformLocation('modelViewMatrix'), 1, GL_FALSE, world.m44_model_view)
 		glUniformMatrix4fv(self.shader.uniformLocation('projectionMatrix'), 1, GL_FALSE, world.m44_projection)
 		glUniformMatrix4fv(self.shader.uniformLocation('modelMatrix'), 1, GL_FALSE, world.m44_camera_translation)
@@ -152,20 +157,62 @@ class particle_gravity():
 		glDeleteProgram(self.shader.program_id)
 		self.shader = None
 
+CL_KERNEL = """
+__kernel void physics(__global float4* a, __global float4* v,__global int* has_ww, __global int* ww_ids, const unsigned int ww_length)
+{
+	unsigned int id = get_global_id(0);
+	unsigned int n = get_global_size(0);
+	float4 current = a[id];
+	float3 rel;
+	float dist = 0;
+	float p = 5000;
+	float p_eps = 0.000001f;
+	float force;
+	float acc;
+	int ww;
+	float dt = 0.0001f;
+
+	for(unsigned int i = 0;i < ww_length;i++) {
+		ww = ww_ids[i];
+		rel.x = a[ww].x-a[id].x;
+		rel.y = a[ww].y-a[id].y;
+		rel.z = a[ww].z-a[id].z;
+
+		dist = pow(rel.x,2)+pow(rel.y,2)+pow(rel.z,2)+p_eps;
+		rel.x /= half_sqrt(dist);
+		rel.y /= half_sqrt(dist);
+		rel.z /= half_sqrt(dist);
+
+		acc = 1/dist;
+		force = rel.x * acc;
+		v[id].x += a[ww].w * force*dt;
+		force = rel.y * acc;
+		v[id].y += a[ww].w * force*dt;
+		force = rel.z * acc;
+		v[id].z += a[ww].w * force*dt;
+	}
+
+
+	a[id].x += v[id].x*0.0001f;
+	a[id].y += v[id].y*0.0001f;
+	a[id].z += v[id].z*0.0001f;
+}"""
 VERTEX_SHADER = """
 #version 410
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 in vec3 buffer_in_position;
+in vec3 buffer_in_vel;
 in vec3 buffer_in_color;
 in float buffer_in_radius;
 
 out vec3 vert_point_color;
 out float vert_radius;
-
+out vec3 vert_vel;
 void main() {
 	vert_point_color = buffer_in_color;
 	vert_radius = buffer_in_radius;
+	vert_vel = buffer_in_vel;
 	gl_Position = projectionMatrix*modelViewMatrix*vec4(buffer_in_position, 1.0);
 }
 """
@@ -174,13 +221,21 @@ FRAGMENT_SHADER = """
 
 in vec3 vert_color;
 in vec2 tex_coord;
+in vec3 frag_vel;
 
 out vec4 pixel_color;
+float fac;
+float fac2;
 void main() {
     if (1.0-length(tex_coord)<0.0) {
     	discard;
     }
-    pixel_color = vec4(vert_color, 0.2-(.7*length( tex_coord )*.7*length( tex_coord ))+.3);
+    //frag_vel;
+    //
+    vert_color;
+    fac = 1-pow(2.8,-length(frag_vel)/1500-0.1);
+    fac2 = pow(2.8,-length(frag_vel)/1000);
+    pixel_color = vec4(fac2,fac,fac, 0.2-(.7*length( tex_coord )*.7*length( tex_coord ))+.3);
 }
 """
 GEOMETRY_SHADER = """
@@ -193,25 +248,33 @@ uniform mat4 modelMatrix;
 
 in float vert_radius[1];
 in vec3 vert_point_color[1];
+in vec3 vert_vel[1];
 
 out vec3 vert_color;
 out vec2 tex_coord;
+out vec3 frag_vel;
+
 void main(void)
 {
 	tex_coord = vec2(-1,-1);
 	vert_color = vert_point_color[0];
+	frag_vel = vert_vel[0];
 	gl_Position = gl_in[0].gl_Position + modelMatrix*vec4(-vert_radius[0],-vert_radius[0],0,0) ;
 	EmitVertex();
+
+	frag_vel = vert_vel[0];
 	tex_coord = vec2(-1,1);
 	vert_color = vert_point_color[0];
-
 	gl_Position = gl_in[0].gl_Position + modelMatrix*vec4(-vert_radius[0],vert_radius[0], 0,0) ;
 	EmitVertex();
+
+	frag_vel = vert_vel[0];
 	tex_coord = vec2(1,-1);
 	vert_color = vert_point_color[0];
-
 	gl_Position = gl_in[0].gl_Position + modelMatrix*vec4( vert_radius[0],-vert_radius[0], 0,0) ;
 	EmitVertex();
+
+	frag_vel = vert_vel[0];
 	tex_coord = vec2(1,1);
 	vert_color = vert_point_color[0];
 	gl_Position = gl_in[0].gl_Position + modelMatrix*vec4( vert_radius[0],vert_radius[0], 0,0) ;

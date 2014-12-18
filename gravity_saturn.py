@@ -6,8 +6,8 @@ from lib.particle_gravity import particle_gravity
 from math import pi,sqrt,cos,sin
 import numpy
 import random
-from sim9 import sim9
-class sim10(sim9):
+from gravity_bh import gravity_bh_controller
+class gravity_saturn_controller(gravity_bh_controller):
 
 	def configureObjects(self,c_obj_n):
 		self.gravity.pushParticleToInitState([0,0,0],[0,0,0],800000,15,True,[1,1,0])
@@ -22,12 +22,12 @@ class sim10(sim9):
 			self.gravity.pushParticleToInitState(
 				[1-rand[0]+c_r*cos(dphi*obj),.1-rand[2]/20.,1-rand[1]+-c_r*sin(dphi*obj)],
 				[rand[3]+sin(dphi*obj)*sat_v,1-rand[2]/20,rand[4]+cos(dphi*obj)*sat_v],
-				50+rand[6]*50, 0.007, False,
+				50+rand[6]*50, 0.05, False,
 				[1-rand[6]/4.,0.5+rand[6]/4.,1-rand[6]/4.]
 			)
 
 if __name__ == "__main__":
 	app = application()
-	sim = sim10(app, 1000000)
+	sim = gravity_saturn_controller(app, 1000000)
 	sim.prepare()
 	app.run()

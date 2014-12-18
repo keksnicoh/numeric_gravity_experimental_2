@@ -71,9 +71,9 @@ class application():
 
 	def initGlCoreProfile(self):
 		"""setup opengl 4.1"""
+		glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, 1)
 		glfw.WindowHint(glfw.CONTEXT_VERSION_MAJOR, 4)
 		glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, 1)
-		glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, 1)
 		glfw.WindowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 
 	def initGlfw(self):

@@ -1,0 +1,42 @@
+OPENGL 4.1 CORE PROFILE
+=======================
+Need to ensure proper installation of opengl 4.1 core profile
+this implies that all deprecated opengl functions are not
+available anymore
+
+
+IMPLICIT DEPENDENCY IN SIX 1.8.0 BY PyOpenCl => PyTools => six.moves
+===================================================================
+Note that library six used by pytools
+maybe linked in something like
+/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/
+so pip installation of newest version 1.8.0 required
+imlicit by pyopencl wont be activated.
+solution: renamve six.py, six.pyc to six_old.py, six_old.pyc
+to activate pip's version...
+
+
+OPENCL
+======
+1. compile with interop
+http://comments.gmane.org/gmane.comp.python.opencl/1720
+2. always assert cl.have_gl()
+run this:
+https://www.mail-archive.com/pyopencl@tiker.net/msg01691.html
+	pip uninstall pyopencl
+	git clone http://git.tiker.net/trees/pyopencl.git
+	cd pyopencl
+	git submodule init
+	git submodule update
+	python configure.py --cl-enable-gl
+	python setup.py build
+	make
+	python setup.py install
+protect your self from segfaults by interop
+	self.ctx = cl.Context(properties=get_gl_sharing_context_properties(),devices=[])
+
+used libraries
+cyglfw3
+pyopengl
+pyopencl
+numpy
